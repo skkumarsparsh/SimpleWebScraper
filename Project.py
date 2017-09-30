@@ -60,25 +60,30 @@ c.execute('CREATE table if not exists newsarticles(article varchar(250), url var
 body = body + "Android Police-\r\n\r\n"
 
 for k in range(0, len(name)):
-    c.execute("INSERT into newsarticles values('" + str(name[k]) + "','" + str(link[k]) + "','"
-              + str(time[k]) + "','" + str('Android Police') + "')")
+    c.execute("SELECT * from newsarticles where article = ?", (name[k],))
+    data = c.fetchone()
+    if data is None:
+        c.execute("INSERT into newsarticles values('" + str(name[k]) + "','" + str(link[k]) + "','"
+                  + str(time[k]) + "','" + str('Android Police') + "')")
     body = body + str(name[k]) + ": " + str(link[k]) + "\r\n\r\n"
 
 body = body + "\r\n\r\n\r\n"
-
 body = body + "The Verge-\r\n\r\n"
 
 for k in range(0, len(name)):
-    c.execute("INSERT into newsarticles values('" + str(name2[k]) + "','" + str(link2[k]) + "','"
-              + str(time2[k]) + "','" + str('The Verge') + "')")
+    c.execute("SELECT * from newsarticles where article = ?", (name2[k],))
+    data = c.fetchone()
+    if data is None:
+        c.execute("INSERT into newsarticles values('" + str(name2[k]) + "','" + str(link2[k]) + "','"
+                  + str(time2[k]) + "','" + str('The Verge') + "')")
     body = body + str(name2[k]) + ": " + str(link2[k]) + "\r\n\r\n"
 
 conn.commit()
 print(pd.read_sql_query('SELECT * FROM newsarticles', conn))
-conn.close()
 
 msg.attach(MIMEText(body, 'plain'))
 text = msg.as_string().encode('utf-8')
 
 server.sendmail(fromaddr, toaddr, text)
 server.quit()
+conn.close()
