@@ -3,9 +3,9 @@ import sqlite3
 import urllib.request as ur
 import tkinter as tk
 from tkinter import ttk
+from datetime import datetime
 
 import bs4
-import pandas as pd
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -17,7 +17,6 @@ toaddr = "skkumarsparsh@gmail.com"
 msg = MIMEMultipart()
 msg['From'] = fromaddr
 msg['To'] = toaddr
-msg['Subject'] = "News Articles"
 
 var = "Please wait while the news articles are retrieved and the email is sent"
 
@@ -55,7 +54,7 @@ class StartPage(tk.Frame):
         button = ttk.Button(self, text="Retrieve News Articles", command=lambda: controller.show_frame(PageOne))
         button.pack(padx=20)
 
-        button2 = ttk.Button(self, text="See History of News Articles", command=lambda: controller.show_frame(PageTwo))
+        button2 = ttk.Button(self, text="See the News Articles Archive", command=lambda: controller.show_frame(PageTwo))
         button2.pack(pady=10, padx=20)
 
 
@@ -77,6 +76,7 @@ class PageOne(tk.Frame):
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
             server.login(fromaddr, "thisisanewpassword")
+            msg['Subject'] = "News Articles - " + str(datetime.now())
 
             body = "\r\nHere are the news articles:\r\n\r\n\r\n"
 
@@ -139,7 +139,6 @@ class PageOne(tk.Frame):
                 body = body + str(name2[k]) + ": " + str(link2[k]) + "\r\n\r\n"
 
             conn.commit()
-            print(pd.read_sql_query('SELECT * FROM newsarticles', conn))
 
             msg.attach(MIMEText(body, 'plain'))
             text = msg.as_string().encode('utf-8')
@@ -156,14 +155,43 @@ class PageOne(tk.Frame):
 class PageTwo(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = ttk.Label(self, text="History of the News Articles retrieved", font=LARGE_FONT)
-        label.pack(pady=50, padx=50)
+        label = ttk.Label(self, text="Archive of the News Articles", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
+
+        self.bind("<<ShowFrame>>", self.onShowFrame)
+
+        self.tree = ttk.Treeview(self, columns=('URL', 'Time', 'Website'))
+        self.tree.column('#0', width=550)
+        self.tree.column('URL', width=180)
+        self.tree.column('Time', width=180)
+        self.tree.column('Website', width=120)
+        self.tree.heading('#0', text='Article')
+        self.tree.heading('URL', text='URL')
+        self.tree.heading('Time', text='Time')
+        self.tree.heading('Website', text='Website')
+        self.tree.pack(padx=10, pady=10)
 
         button1 = ttk.Button(self, text="Back to Home", command=lambda: controller.show_frame(StartPage))
         button1.pack(pady=10, padx=20)
 
-        # button2 = ttk.Button(self, text="Page One", command=lambda: controller.show_frame(PageOne))
-        # button2.pack(pady=10, padx=20)
+    def onShowFrame(self, event):
+        conn = sqlite3.connect('news_articles.db')
+        c = conn.cursor()
+
+        c.execute('SELECT article from newsarticles')
+        articles = c.fetchall()
+
+        c.execute('SELECT url from newsarticles')
+        urls = c.fetchall()
+
+        c.execute('SELECT date from newsarticles')
+        dates = c.fetchall()
+
+        c.execute('SELECT website from newsarticles')
+        websites = c.fetchall()
+
+        for i in range(0, len(articles)):
+            self.tree.insert('', 'end', text=articles[i][0], values=(urls[i][0], dates[i][0], websites[i][0]))
 
 app = FirstApp()
 app.mainloop()
