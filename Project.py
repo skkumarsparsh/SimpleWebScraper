@@ -11,14 +11,28 @@ from email.mime.text import MIMEText
 
 LARGE_FONT = ("Verdana", 12)
 
+conn = sqlite3.connect('email.db')
+c = conn.cursor()
+
+c.execute('CREATE table if not exists email(e varchar(50))')
+
+c.execute("SELECT e from email")
+data = c.fetchone()
+print(data)
+if data is None:
+    toaddr = "skkumarsparsh@gmail.com"
+    c.execute("INSERT into email values('" + toaddr + "')")
+else:
+    toaddr = data[0]
+
+conn.commit()
+conn.close()
+
 fromaddr = "sparshbbhs@gmail.com"
-toaddr = "skkumarsparsh@gmail.com"
 
 msg = MIMEMultipart()
 msg['From'] = fromaddr
 msg['To'] = toaddr
-
-var = "Please wait while the news articles are retrieved and the email is sent"
 
 
 class FirstApp(tk.Tk):
@@ -32,7 +46,7 @@ class FirstApp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
-        for F in (StartPage, PageOne, PageTwo):
+        for F in (StartPage, PageOne, PageTwo, PageThree):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -52,7 +66,10 @@ class StartPage(tk.Frame):
         label.pack(pady=50, padx=50)
 
         button = ttk.Button(self, text="Retrieve News Articles", command=lambda: controller.show_frame(PageOne))
-        button.pack(padx=20)
+        button.pack(pady=10, padx=20)
+
+        button = ttk.Button(self, text="Change Email Address", command=lambda: controller.show_frame(PageThree))
+        button.pack(pady=10, padx=20)
 
         button2 = ttk.Button(self, text="See the News Articles Archive", command=lambda: controller.show_frame(PageTwo))
         button2.pack(pady=10, padx=20)
@@ -70,8 +87,11 @@ class PageOne(tk.Frame):
 
         self.bind("<<ShowFrame>>", self.onShowFrame)
 
+    def reset(self):
+        self.label.configure(text="Please wait while the news articles are collected and sent to your email...")
+
     def onShowFrame(self, event):
-        self.label.config(text="Please wait while the news articles are collected and sent to your email...")
+        self.reset()
         try:
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
@@ -192,6 +212,37 @@ class PageTwo(tk.Frame):
 
         for i in range(0, len(articles)):
             self.tree.insert('', 'end', text=articles[i][0], values=(urls[i][0], dates[i][0], websites[i][0]))
+
+class PageThree(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        self.label = ttk.Label(self, text="The current email address for sending news articles is " + toaddr, font=LARGE_FONT)
+        self.label.pack(pady=50, padx=50)
+
+        label2 = ttk.Label(self, text="Enter the new email address:", font=LARGE_FONT)
+        label2.pack(pady=1)
+
+        self.entry = ttk.Entry(self, width=50)
+        self.entry.pack(padx=10, pady=10)
+
+        button = ttk.Button(self, text="Change Email Address", command=self.changeEmail)
+        button.pack(pady=10, padx=20)
+
+        button2 = ttk.Button(self, text="Go back", command=lambda: controller.show_frame(StartPage))
+        button2.pack(pady=10, padx=20)
+
+    def changeEmail(self):
+        global toaddr
+        toaddr = self.entry.get()
+        self.label.configure(text="The current email address for sending news articles is " + toaddr)
+
+        conn = sqlite3.connect('email.db')
+        c = conn.cursor()
+        c.execute("DROP table email")
+        c.execute('CREATE table email(e varchar(50))')
+        c.execute("INSERT into email values('" + toaddr + "')")
+        conn.commit()
+        conn.close()
 
 app = FirstApp()
 app.mainloop()
